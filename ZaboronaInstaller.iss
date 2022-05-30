@@ -51,11 +51,16 @@ Name: "{group}\{#MyAppName}"; Filename: {#GuiExePath}; Parameters: {#LnkParamStr
 
 [Run]
 ; параметры установки OpenVPN взяты отсюда: https://forums.openvpn.net/viewtopic.php?f=5&t=27017
+; msiexec /i OpenVPN-2.5.0-I601-amd64.msi ADDLOCAL=OpenVPN.Service,OpenVPN,Drivers,Drivers.Wintun /passive
 Filename: "{tmp}\Downloads\{#InstallerExeName}"; Description: "Open VPN с настройками от проекта Zaborona Help"; StatusMsg: "Установка OpenVPN..."; Parameters: "/S /SELECT_SHORTCUTS=0 /D={app}";
 
 [UninstallRun]
-Filename: "{app}\Uninstall.exe"; 
-;Parameters: "/S"
+; Без параметры /S диалог удаления выглядит нелогично для пользователя, т.к. появляется 2 диалога
+Filename: "{app}\Uninstall.exe"; Parameters: "/S"
+
+;[Registry]
+; Пытаться удалить ключ здесь бесполезно (хотя это помогает в т.ч. для настройки в GUI), т.к. он создаётся только после первой перезагрузки
+;Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "OPENVPN-GUI"; Flags: deletekey
 
 [Code]
 const
