@@ -5,9 +5,10 @@
 ; Краткое имя программы без пробелов
 #define ShortAppName "ZaboronaVPN"
 ; Имя исполнительного файла инсталлятора, которое будет дано файлу загруженному из Интернета
-#define InstallerExeName "open-vpn-latest.exe"
+#define InstallerExeName "open-vpn-latest.msi"
 ; Имя базового файла конфигурации OpenVPN от Zaborona Help
-#define ConfigName "zaborona-help.ovpn"
+;#define ConfigName "zaborona-help.ovpn"
+#define ConfigName "zaborona-help-max-tcp.ovpn"
 ; Возможные параметры запуска OpenVPN можно посмотреть в командной строке: "openvpn-gui.exe --help"
 #define LnkParamString "--connect " + ConfigName + " --show_balloon 2 --silent_connection 1 --show_script_window 0"; 
 #define LnkComment "Запускает OpenVPN и подключается к Zaborona Help";
@@ -52,11 +53,11 @@ Name: "{group}\{#MyAppName}"; Filename: {#GuiExePath}; Parameters: {#LnkParamStr
 [Run]
 ; параметры установки OpenVPN взяты отсюда: https://forums.openvpn.net/viewtopic.php?f=5&t=27017
 ; msiexec /i OpenVPN-2.5.0-I601-amd64.msi ADDLOCAL=OpenVPN.Service,OpenVPN,Drivers,Drivers.Wintun /passive
-Filename: "{tmp}\Downloads\{#InstallerExeName}"; Description: "Open VPN с настройками от проекта Zaborona Help"; StatusMsg: "Установка OpenVPN..."; Parameters: "/S /SELECT_SHORTCUTS=0 /D={app}";
+Filename: "msiexec"; Description: "Open VPN с настройками от проекта Zaborona Help"; StatusMsg: "Установка OpenVPN..."; Parameters: "/i {tmp}\Downloads\{#InstallerExeName} /passive PRODUCTDIR=""{app}""";
 
 [UninstallRun]
 ; Без параметры /S диалог удаления выглядит нелогично для пользователя, т.к. появляется 2 диалога
-Filename: "{app}\Uninstall.exe"; Parameters: "/S"
+Filename: "msiexec"; Parameters: "/passive /uninstall A662F537-DB6E-4F00-9C2F-7946CBD3F807"
 
 ;[Registry]
 ; Пытаться удалить ключ здесь бесполезно (хотя это помогает в т.ч. для настройки в GUI), т.к. он создаётся только после первой перезагрузки
@@ -64,8 +65,8 @@ Filename: "{app}\Uninstall.exe"; Parameters: "/S"
 
 [Code]
 const
-  WIN_10_INSTALL_URL = 'https://build.openvpn.net/downloads/releases/latest/openvpn-install-latest-stable-win10.exe';
-  WIN_7_8_INSTALL_URL = 'https://build.openvpn.net/downloads/releases/latest/openvpn-install-latest-stable-win7.exe';
+  AMD64_WIN_INSTALL_URL = 'https://build.openvpn.net/downloads/releases/latest/openvpn-latest-stable-amd64.msi';
+  X86_WIN_INSTALL_URL = 'https://build.openvpn.net/downloads/releases/latest/openvpn-latest-stable-x86.msi';
 
 var
   DownloadPage: TDownloadWizardPage;
@@ -82,12 +83,6 @@ begin
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
 end;
 
-// Возвращает True, если инсталлятор запущен из под Windows 10 - иначе False
-function IsWindows10OrLater: Boolean;
-begin
-  // GetWindowsVersion() returns $0A002800 on Windows 10 Version 1507, which is version 10.0.10240.
-  Result := (GetWindowsVersion() >= $0A002800);
-end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
@@ -100,16 +95,18 @@ begin
   //if CurPageID = wpReady then begin
   if CurPageID = wpSelectDir then begin  
     DownloadPage.Clear();    
-    if (IsWindows10OrLater()) then
+    if (IsWin64()) then
       begin
-        installUrl := WIN_10_INSTALL_URL;
+        installUrl := AMD64_WIN_INSTALL_URL;
       end
     else
       begin
-        installUrl := WIN_7_8_INSTALL_URL;
+        installUrl := X86_WIN_INSTALL_URL;
       end;
     DownloadPage.Add(installUrl, ExpandConstant('{#InstallerExeName}'), '');    // last param - known file hash to check after download
-    DownloadPage.Add('https://zaborona.help/zaborona-help.ovpn', 'zaborona-help.ovpn', '');
+    //эта ссылка тоже работает, но на сайте её уже не пуюликуют
+    //DownloadPage.Add('https://zaborona.help/zaborona-help.ovpn', 'zaborona-help.ovpn', '');
+    DownloadPage.Add('https://zaborona.help/openvpn-client-config/srv0.zaborona-help_maxroutes.ovpn', '{#ConfigName}', '');
     DownloadPage.Show();
     try
       try
